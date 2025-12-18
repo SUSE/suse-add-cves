@@ -195,7 +195,10 @@ int handled_main(int argc, char **argv)
 	if (!cve_hash_map)
 		fail_with_message("Couldn't load kernel vulns database git tree");
 
-	const auto cve2bugzilla_file = SlCurl::LibCurl::fetchFileIfNeeded("cve2bugzilla.txt",
+	auto cacheDir = SlHelpers::HomeDir::createCacheDir("suse-get-maintainers");
+	if (cacheDir.empty())
+		fail_with_message("Unable to create a cache dir");
+	const auto cve2bugzilla_file = SlCurl::LibCurl::fetchFileIfNeeded(cacheDir / "cve2bugzilla.txt",
 									  "https://gitlab.suse.de/security/cve-database/-/raw/master/data/cve2bugzilla",
 									  forceCVE2Bugzilla, false,
 									  std::chrono::hours{12});
