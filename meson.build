@@ -19,12 +19,13 @@ cxxopts = dependency('cxxopts')
 libcurl = dependency('slcurl++')
 libcves = dependency('slcves++')
 libgit = dependency('slgit++')
+libhelpers = dependency('slhelpers++')
 
 prj_name = meson.project_name()
 executable(prj_name,
   [ prj_name + '.cc' ],
   implicit_include_directories: false,
-  dependencies: [ cxxopts, libcurl, libcves, libgit ],
+  dependencies: [ cxxopts, libcurl, libcves, libgit, libhelpers ],
   install: true,
 )
 
