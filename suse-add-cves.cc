@@ -15,6 +15,7 @@
 #include <sl/cves/CVEHashMap.h>
 #include <sl/git/Repo.h>
 #include <sl/helpers/Color.h>
+#include <sl/helpers/HomeDir.h>
 #include <sl/helpers/Misc.h>
 #include <sl/helpers/String.h>
 
