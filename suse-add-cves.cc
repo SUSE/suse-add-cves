@@ -15,19 +15,16 @@
 #include <sl/cves/CVEHashMap.h>
 #include <sl/git/Repo.h>
 #include <sl/helpers/Color.h>
+#include <sl/helpers/Exception.h>
 #include <sl/helpers/HomeDir.h>
 #include <sl/helpers/Misc.h>
 #include <sl/helpers/String.h>
 
 using Clr = SlHelpers::Color;
+using RunEx = SlHelpers::RuntimeException;
+using SlHelpers::raise;
 
 namespace {
-
-template<typename... Args> void fail_with_message(Args&&... args)
-{
-	(std::cerr << ... << args) << std::endl;
-	throw 1;
-}
 
 struct gm {
 	std::filesystem::path vulns;
@@ -40,11 +37,11 @@ std::vector<std::filesystem::path> read_all_patches()
 {
 	auto ksourceGitOpt = SlHelpers::Env::get<std::filesystem::path>("KSOURCE_GIT");
 	if (!ksourceGitOpt)
-		fail_with_message("Please set KSOURCE_GIT!");
+		RunEx("Please set KSOURCE_GIT!").raise();
 	auto ksource_git = std::move(ksourceGitOpt.value());
 	ksource_git /= "patches.suse";
 	if (!std::filesystem::exists(ksource_git))
-		fail_with_message(ksource_git, " does not exists!");
+		RunEx() << ksource_git << " does not exists!" << raise;
 
 	std::vector<std::filesystem::path> ret;
 
@@ -52,7 +49,7 @@ std::vector<std::filesystem::path> read_all_patches()
 		for (const auto &entry: std::filesystem::directory_iterator(ksource_git))
 			ret.push_back(entry.path());
 	} catch (...) {
-		fail_with_message(ksource_git, " cannot be read!");
+		RunEx() << ksource_git << " cannot be read!" << raise;
 	}
 
 	return ret;
@@ -104,9 +101,9 @@ void parse_options(int argc, char **argv)
 			gm.paths = read_all_patches();
 
 		if (gm.paths.empty() && (!gm.init || gm.vulns.empty()))
-			fail_with_message("You must provide at least one patch or clone the vulns "
+			RunEx("You must provide at least one patch or clone the vulns "
 					  "repository with --init (-i) and --vulns (-v)!  "
-					  "See --help (-h)!");
+					  "See --help (-h)!").raise();
 	} catch (const cxxopts::exceptions::parsing &e) {
 		std::cerr << "arguments error: " << e.what() << '\n';
 		std::cerr << options.help();
@@ -150,18 +147,19 @@ bool already_has_bsc_ref(const std::string &ref_line, const std::string &bsc_num
 	return ref_line.find(bsc_number) != std::string::npos;
 }
 
-int handled_main(int argc, char **argv)
+void handled_main(int argc, char **argv)
 {
 	parse_options(argc, argv);
 
 	if (gm.init) {
 		if (!gm.vulns.empty()) {
 			if (!SlGit::Repo::clone(gm.vulns, "https://git.kernel.org/pub/scm/linux/security/vulns.git"))
-				fail_with_message(git_error_last()->message);
+				RunEx("Failed to clone vulns git: ") << SlGit::Repo::lastError() <<
+									raise;
 			std::cout << "\n\nexport VULNS_GIT=" << gm.vulns <<
 				     " # store into ~/.bashrc\n\n\n";
 		}
-		return 0;
+		return;
 	}
 
 	if (gm.vulns.empty()) {
@@ -169,7 +167,7 @@ int handled_main(int argc, char **argv)
 		if (vulns_tree_dir)
 			gm.vulns = vulns_tree_dir;
 		else
-			fail_with_message("Provide a path to kernel vulns database git tree either via -v or $VULNS_GIT");
+			RunEx("Provide a path to kernel vulns database git tree either via -v or $VULNS_GIT").raise();
 	}
 
 	bool forceCVE2Bugzilla = false;
@@ -194,18 +192,18 @@ int handled_main(int argc, char **argv)
 							     SlCVEs::CVEHashMap::ShaSize::Long,
 							     gm.cve_branch, 0, false);
 	if (!cve_hash_map)
-		fail_with_message("Couldn't load kernel vulns database git tree");
+		RunEx("Couldn't load kernel vulns database git tree").raise();
 
 	auto cacheDir = SlHelpers::HomeDir::createCacheDir("suse-get-maintainers");
 	if (cacheDir.empty())
-		fail_with_message("Unable to create a cache dir");
+		RunEx("Unable to create a cache dir").raise();
 	const auto cve2bugzilla_file = SlCurl::LibCurl::fetchFileIfNeeded(cacheDir / "cve2bugzilla.txt",
 									  "https://gitlab.suse.de/security/cve-database/-/raw/master/data/cve2bugzilla",
 									  forceCVE2Bugzilla, false,
 									  std::chrono::hours{12});
 	const auto cve_to_bugzilla = SlCVEs::CVE2Bugzilla::create(cve2bugzilla_file);
 	if (!cve_to_bugzilla)
-		fail_with_message("Couldn't load cve2bugzilla.txt");
+		RunEx("Couldn't load cve2bugzilla.txt").raise();
 
 	for (auto const &p: gm.paths) {
 		const auto path_to_patch = std::filesystem::absolute(p);
@@ -257,8 +255,6 @@ int handled_main(int argc, char **argv)
 
 		std::filesystem::rename(new_patch, path_to_patch);
 	}
-
-	return 0;
 }
 
 } // namespace
@@ -266,10 +262,13 @@ int handled_main(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	try {
-		return handled_main(argc, argv);
+		handled_main(argc, argv);
 	} catch (int ret) {
 		return ret;
-	} catch (...) {
-		return 42;
+	} catch (std::runtime_error &e) {
+		Clr(std::cerr, Clr::RED) << e.what();
+		return EXIT_FAILURE;
 	}
+
+	return 0;
 }
