@@ -199,9 +199,7 @@ void handled_main(int argc, char **argv)
 									  "https://gitlab.suse.de/security/cve-database/-/raw/master/data/cve2bugzilla",
 									  forceCVE2Bugzilla, false,
 									  std::chrono::hours{12});
-	const auto cve_to_bugzilla = SlCVEs::CVE2Bugzilla::create(cve2bugzilla_file);
-	if (!cve_to_bugzilla)
-		RunEx("Couldn't load cve2bugzilla.txt").raise();
+	const SlCVEs::CVE2Bugzilla cve_to_bugzilla(cve2bugzilla_file);
 
 	for (auto const &p: gm.paths) {
 		const auto path_to_patch = std::filesystem::absolute(p);
@@ -225,7 +223,7 @@ void handled_main(int argc, char **argv)
 		const std::string cve{ cve_hash_map.get_cve(sha) };
 		if (cve.empty())
 			continue;
-		const std::string bsc = cve_to_bugzilla->get_bsc(cve);
+		const std::string bsc{ cve_to_bugzilla.get_bsc(cve) };
 
 		const long idx = get_references_idx(lines);
 		if (idx == -1) {
