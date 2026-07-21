@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cxxopts.hpp>
 #include <fstream>
+#include <string>
 #include <vector>
 #include <regex>
 #include <cstdlib>
@@ -188,11 +189,8 @@ void handled_main(int argc, char **argv)
 		}
 	}
 
-	const auto cve_hash_map = SlCVEs::CVEHashMap::create(gm.vulns,
-							     SlCVEs::CVEHashMap::ShaSize::Long,
-							     gm.cve_branch, 0, false);
-	if (!cve_hash_map)
-		RunEx("Couldn't load kernel vulns database git tree").raise();
+	const SlCVEs::CVEHashMap cve_hash_map(gm.vulns, SlCVEs::CVEHashMap::ShaSize::Long, gm.cve_branch, 0,
+					      false);
 
 	auto cacheDir = SlHelpers::HomeDir::createCacheDir("suse-get-maintainers");
 	if (cacheDir.empty())
@@ -224,7 +222,7 @@ void handled_main(int argc, char **argv)
 			continue;
 		}
 
-		const std::string cve = cve_hash_map->get_cve(sha);
+		const std::string cve{ cve_hash_map.get_cve(sha) };
 		if (cve.empty())
 			continue;
 		const std::string bsc = cve_to_bugzilla->get_bsc(cve);
