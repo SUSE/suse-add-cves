@@ -12,8 +12,8 @@
 #include <utime.h>
 
 #include <sl/curl/Curl.h>
-#include <sl/cves/CVE2Bugzilla.h>
-#include <sl/cves/CVEHashMap.h>
+#include <sl/cves/CveBscMap.h>
+#include <sl/cves/CveShaMap.h>
 #include <sl/git/Repo.h>
 #include <sl/helpers/Color.h>
 #include <sl/helpers/Exception.h>
@@ -189,8 +189,8 @@ void handled_main(int argc, char **argv)
 		}
 	}
 
-	const SlCVEs::CVEHashMap cve_hash_map(gm.vulns, SlCVEs::CVEHashMap::ShaSize::Long, gm.cve_branch, 0,
-					      false);
+	const SlCVEs::CveShaMap cveShaMap(gm.vulns, SlCVEs::CveShaMap::ShaSize::Long,
+					  gm.cve_branch, 0, false);
 
 	auto cacheDir = SlHelpers::HomeDir::createCacheDir("suse-get-maintainers");
 	if (cacheDir.empty())
@@ -199,7 +199,7 @@ void handled_main(int argc, char **argv)
 									  "https://gitlab.suse.de/security/cve-database/-/raw/master/data/cve2bugzilla",
 									  forceCVE2Bugzilla, false,
 									  std::chrono::hours{12});
-	const SlCVEs::CVE2Bugzilla cve_to_bugzilla(cve2bugzilla_file);
+	const SlCVEs::CveBscMap cveBscMap(cve2bugzilla_file);
 
 	for (auto const &p: gm.paths) {
 		const auto path_to_patch = std::filesystem::absolute(p);
@@ -220,10 +220,10 @@ void handled_main(int argc, char **argv)
 			continue;
 		}
 
-		const std::string cve{ cve_hash_map.get_cve(sha) };
+		const std::string cve{ cveShaMap.getCve(sha) };
 		if (cve.empty())
 			continue;
-		const std::string bsc{ cve_to_bugzilla.get_bsc(cve) };
+		const std::string bsc{ cveBscMap.getBsc(cve) };
 
 		const long idx = get_references_idx(lines);
 		if (idx == -1) {
