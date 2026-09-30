@@ -40,18 +40,33 @@ std::vector<std::filesystem::path> read_all_patches()
 	if (!ksourceGitOpt)
 		RunEx("Please set KSOURCE_GIT!").raise();
 	auto ksource_git = std::move(ksourceGitOpt.value());
-	ksource_git /= "patches.suse";
 	if (!std::filesystem::exists(ksource_git))
 		RunEx() << ksource_git << " does not exists!" << raise;
 
 	std::vector<std::filesystem::path> ret;
 
 	try {
-		for (const auto &entry: std::filesystem::directory_iterator(ksource_git))
-			ret.push_back(entry.path());
+		for (const auto &entry: std::filesystem::directory_iterator(ksource_git)) {
+			if (!entry.is_directory())
+				continue;
+
+			const auto &patches = entry.path();
+			auto name = patches.filename().string();
+			if (!name.starts_with("patches."))
+				continue;
+
+			if (name == "patches.kabi")
+				continue;
+
+			for (const auto &entry: std::filesystem::directory_iterator(patches))
+				ret.push_back(entry.path());
+		}
 	} catch (...) {
 		RunEx() << ksource_git << " cannot be read!" << raise;
 	}
+
+	if (ret.empty())
+		RunEx() << ksource_git << " has no patches!" << raise;
 
 	return ret;
 }
@@ -83,7 +98,7 @@ void parse_options(int argc, char **argv)
 		("i,init", "Clone the upstream vulns repository;  You need to provide at least -v!",
 			cxxopts::value(gm.init)->default_value("false"))
 		("f,from_stdin", "Read paths to patches from stdin instead of arguments")
-		("k,ksource_git", "Just process all files in $KSOURCE_GIT/patches.suse")
+		("k,ksource_git", "Just process all files in $KSOURCE_GIT/patches.* except kabi")
 		("patches", "Patches to process", cxxopts::value(gm.paths))
 	;
 
