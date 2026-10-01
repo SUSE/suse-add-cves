@@ -32,6 +32,7 @@ struct gm {
 	std::string cve_branch;
 	std::vector<std::filesystem::path> paths;
 	bool init;
+	bool onlyBoth;
 } gm;
 
 std::vector<std::filesystem::path> read_all_patches()
@@ -99,6 +100,8 @@ void parse_options(int argc, char **argv)
 			cxxopts::value(gm.init)->default_value("false"))
 		("f,from_stdin", "Read paths to patches from stdin instead of arguments")
 		("k,ksource_git", "Just process all files in $KSOURCE_GIT/patches.* except kabi")
+		("only_both", "Only add CVE numbers that have a Bugzilla reference too",
+			cxxopts::value(gm.onlyBoth)->default_value("false"))
 		("patches", "Patches to process", cxxopts::value(gm.paths))
 	;
 
@@ -238,6 +241,8 @@ void handled_main(int argc, char **argv)
 		if (cve.empty())
 			continue;
 		const std::string bsc{ cveBscMap.getBsc(cve) };
+		if (bsc.empty() && gm.onlyBoth)
+			continue;
 
 		const long idx = get_references_idx(lines);
 		if (idx == -1) {
