@@ -143,10 +143,9 @@ std::string get_hash(const std::vector<std::string> &v, long &idx)
 
 long get_references_idx(const std::vector<std::string> &v)
 {
-	thread_local const auto git_ref_regex = std::regex("References: ", std::regex::optimize | std::regex::icase);
 	long i = 0;
 	for (const auto &line: v) {
-		if (std::regex_search(line, git_ref_regex))
+		if (SlHelpers::String::iStartsWith(line, "References: "))
 			return i;
 		++i;
 	}
