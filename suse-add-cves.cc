@@ -170,9 +170,8 @@ void handled_main(int argc, char **argv)
 	parse_options(argc, argv);
 
 	if (gm.vulns.empty()) {
-		const char *vulns_tree_dir = std::getenv("VULNS_GIT");
-		if (vulns_tree_dir)
-			gm.vulns = vulns_tree_dir;
+		if (auto vulns_tree_dir = SlHelpers::Env::get<std::filesystem::path>("VULNS_GIT"))
+			gm.vulns = std::move(*vulns_tree_dir);
 
 		if (gm.vulns.empty())
 			RunEx("Provide a path to clone the vulns repository into via -v or $VULNS_GIT").raise();
