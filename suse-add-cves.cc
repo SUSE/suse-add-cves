@@ -197,7 +197,9 @@ void handled_main(int argc, char **argv)
 			constexpr const std::chrono::minutes expires_after{15};
 
 			if (mtime < now - expires_after) {
-				SlGit::Repo::update(gm.vulns);
+				if (!SlGit::Repo::update(gm.vulns))
+					Clr(std::cerr, Clr::YELLOW) << "Failed to update vulns git: " <<
+								    SlGit::Repo::lastError();
 				forceCVE2Bugzilla = true;
 			}
 			std::filesystem::last_write_time(origin_master_ref, now);
