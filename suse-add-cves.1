@@ -41,8 +41,12 @@ Take paths to patches from STDIN one per line.
 
 .TP
 .BR \-k ", " \-\-ksource_git
-Try to add references all CVE fixing patches found in
-$KSOURCE_GIT/patches.suse.
+Try to add references to all CVE fixing patches found in
+$KSOURCE_GIT/patches.* (except patches.kabi).
+
+.TP
+.BR \-\-only_both
+Only add CVE numbers that also have a Bugzilla reference.
 
 
 .SH EXAMPLES
@@ -53,7 +57,7 @@ Clone upstream vulnerability repository into /tmp/vulns_git
 $ suse\-add\-cves -v /tmp/vulns_git -i
 .RE
 
-Try to add references to everything in $KSOURCE_GIT/patches.suse
+Try to add references to everything in $KSOURCE_GIT/patches.*
 
 .RS
 $ suse\-add\-cves -k
