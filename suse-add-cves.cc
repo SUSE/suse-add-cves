@@ -119,7 +119,7 @@ void parse_options(int argc, char **argv)
 		if (opts.contains("ksource_git"))
 			gm.paths = read_all_patches();
 
-		if (gm.paths.empty() && (!gm.init || gm.vulns.empty()))
+		if (!gm.init && gm.paths.empty())
 			RunEx("You must provide at least one patch or clone the vulns "
 					  "repository with --init (-i) and --vulns (-v)!  "
 					  "See --help (-h)!").raise();
@@ -169,23 +169,23 @@ void handled_main(int argc, char **argv)
 {
 	parse_options(argc, argv);
 
-	if (gm.init) {
-		if (!gm.vulns.empty()) {
-			if (!SlGit::Repo::clone(gm.vulns, "https://git.kernel.org/pub/scm/linux/security/vulns.git"))
-				RunEx("Failed to clone vulns git: ") << SlGit::Repo::lastError() <<
-									raise;
-			std::cout << "\n\nexport VULNS_GIT=" << gm.vulns <<
-				     " # store into ~/.bashrc\n\n\n";
-		}
-		return;
-	}
-
 	if (gm.vulns.empty()) {
 		const char *vulns_tree_dir = std::getenv("VULNS_GIT");
 		if (vulns_tree_dir)
 			gm.vulns = vulns_tree_dir;
-		else
-			RunEx("Provide a path to kernel vulns database git tree either via -v or $VULNS_GIT").raise();
+
+		if (gm.vulns.empty())
+			RunEx("Provide a path to clone the vulns repository into via -v or $VULNS_GIT").raise();
+	}
+
+	if (gm.init) {
+
+		if (!SlGit::Repo::clone(gm.vulns, "https://git.kernel.org/pub/scm/linux/security/vulns.git"))
+			RunEx("Failed to clone vulns git: ") << SlGit::Repo::lastError() <<
+								raise;
+		std::cout << "\n\nexport VULNS_GIT=" << gm.vulns <<
+			     " # store into ~/.bashrc\n\n\n";
+		return;
 	}
 
 	bool forceCVE2Bugzilla = false;
