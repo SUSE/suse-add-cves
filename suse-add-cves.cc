@@ -273,7 +273,14 @@ void handled_main(int argc, char **argv)
 		}
 
 		for (const auto &l: lines)
-			new_file << l << std::endl;
+			new_file << l << '\n';
+
+		new_file.close();
+		if (!new_file) {
+			Clr(std::cerr, Clr::RED) << "Cannot write file: " << new_patch;
+			std::filesystem::remove(new_patch);
+			continue;
+		}
 
 		std::filesystem::rename(new_patch, path_to_patch);
 	}
