@@ -97,7 +97,7 @@ void parse_options(int argc, char **argv)
 		("b,cve_branch", "Which branch do we care about in $VULNS_GIT repository "
 				 "(by default origin/master)",
 			cxxopts::value(gm.cve_branch)->default_value("origin/master"))
-		("i,init", "Clone the upstream vulns repository;  You need to provide at least -v!",
+		("i,init", "Clone the upstream vulns repository to -v or $VULNS_GIT",
 			cxxopts::value(gm.init)->default_value("false"))
 		("f,from_stdin", "Read paths to patches from stdin instead of arguments")
 		("k,ksource_git", "Just process all files in $KSOURCE_GIT/patches.* except kabi")
@@ -180,7 +180,10 @@ void handled_main(int argc, char **argv)
 			gm.vulns = std::move(*vulns_tree_dir);
 
 		if (gm.vulns.empty())
-			RunEx("Provide a path to clone the vulns repository into via -v or $VULNS_GIT").raise();
+			RunEx() << "Provide a path " <<
+				   (gm.init ? "to clone the vulns repository into" :
+				    "to the kernel vulns database git tree") <<
+				   " via -v or $VULNS_GIT" << raise;
 	}
 
 	if (gm.init) {
