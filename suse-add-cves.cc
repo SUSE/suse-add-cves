@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <cxxopts.hpp>
 #include <fstream>
@@ -155,14 +156,19 @@ long get_references_idx(const std::vector<std::string> &v)
 	return -1;
 }
 
-bool already_has_cve_ref(const std::string &ref_line, const std::string &cve_number)
+bool already_has_ref(std::string_view ref_line, std::string_view ref)
 {
-	return SlHelpers::String::iFind(ref_line, cve_number) != std::string_view::npos;
-}
+	constexpr std::string_view seps{" \t,;"};
 
-bool already_has_bsc_ref(const std::string &ref_line, const std::string &bsc_number)
-{
-	return ref_line.find(bsc_number) != std::string::npos;
+	for (auto pos = ref_line.find_first_not_of(seps); pos != std::string_view::npos;) {
+		const auto end = ref_line.find_first_of(seps, pos);
+		if (std::ranges::equal(ref_line.substr(pos, end - pos), ref,
+				       SlHelpers::String::iEqual))
+			return true;
+		pos = ref_line.find_first_not_of(seps, end);
+	}
+
+	return false;
 }
 
 void handled_main(int argc, char **argv)
@@ -251,9 +257,9 @@ void handled_main(int argc, char **argv)
 			if (!bsc.empty())
 				lines[sha_idx] += " " + bsc;
 		} else {
-			if (!already_has_cve_ref(lines[idx], cve))
+			if (!already_has_ref(lines[idx], cve))
 				lines[idx] += " " + cve;
-			if (!bsc.empty() && !already_has_bsc_ref(lines[idx], bsc))
+			if (!bsc.empty() && !already_has_ref(lines[idx], bsc))
 				lines[idx] += " " + bsc;
 		}
 
