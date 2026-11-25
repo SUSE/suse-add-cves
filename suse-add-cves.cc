@@ -195,21 +195,21 @@ void handled_main(int argc, char **argv)
 
 	bool forceCVE2Bugzilla = false;
 	{
-		const auto origin_master_ref = gm.vulns / ".git/refs/remotes/origin/master";
+		// rewritten by every fetch, unlike loose refs which may be packed
+		const auto fetch_head = gm.vulns / ".git/FETCH_HEAD";
+		const auto now = std::filesystem::file_time_type::clock::now();
+		constexpr const std::chrono::minutes expires_after{15};
+		std::error_code ec;
+		const auto mtime = std::filesystem::last_write_time(fetch_head, ec);
 
-		if (std::filesystem::exists(origin_master_ref)) {
-			const auto mtime = std::filesystem::last_write_time(origin_master_ref);
-			const auto now = std::filesystem::file_time_type::clock::now();
-			constexpr const std::chrono::minutes expires_after{15};
-
-			if (mtime < now - expires_after) {
-				if (!SlGit::Repo::update(gm.vulns))
-					Clr(std::cerr, Clr::YELLOW) << "Failed to update vulns git: " <<
-								    SlGit::Repo::lastError();
-				forceCVE2Bugzilla = true;
+		if (ec || mtime < now - expires_after) {
+			if (!SlGit::Repo::update(gm.vulns)) {
+				Clr(std::cerr, Clr::YELLOW) << "Failed to update vulns git: " <<
+							    SlGit::Repo::lastError();
+				// do not retry on every run
+				std::filesystem::last_write_time(fetch_head, now, ec);
 			}
-			std::filesystem::last_write_time(origin_master_ref, now);
-
+			forceCVE2Bugzilla = true;
 		}
 	}
 
